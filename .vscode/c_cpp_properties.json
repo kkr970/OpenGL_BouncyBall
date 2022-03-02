@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Win64",
+            "includePath": [
+                "${workspaceFolder}/**" ,
+                "${workspaceFolder}/dependencies/GLFW/include",
+                "${workspaceFolder}/dependencies/GLAD/include",
+                "${workspaceFolder}/dependencies/GLM",
+                "${workspaceFolder}/dependencies/FREETYPE/include",
+                "${workspaceFolder}/dependencies/irrKlang/include",
+                "${workspaceFolder}/src" 
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "D:/MinGW/bin/g++.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
