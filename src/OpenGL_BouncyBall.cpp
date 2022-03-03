@@ -64,6 +64,9 @@ int main(int argc, char *argv[])
         lastFrame = currentFrame;
         glfwPollEvents();
 
+        //게임 state update
+        BouncyBall.Update(deltaTime);
+
         //입력
         BouncyBall.ProcessInput(deltaTime);
 
@@ -72,8 +75,7 @@ int main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         BouncyBall.Render();
 
-        //게임 state update
-        BouncyBall.Update(deltaTime);
+        //std::cout << BouncyBall.getXSpeed() << std::endl;
 
         glfwSwapBuffers(window);
     }

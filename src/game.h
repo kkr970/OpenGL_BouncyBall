@@ -29,8 +29,8 @@ enum Direction {
 };
 
 //플레이어 공 설정
-const float PLAYER_X_SPEED_MAX(240.0f);
-const float PLAYER_Y_SPEED_MAX(500.0f);
+const float PLAYER_X_SPEED_MAX(200.0f);
+const float PLAYER_Y_SPEED_MAX(400.0f);
 const float PLAYER_RADIUS(7.0f);
 float PLAYER_SPEED_X;
 float PLAYER_SPEED_Y;
@@ -95,8 +95,6 @@ public:
     GameState State;
     unsigned int Width, Height;
     bool Keys[1024];
-    bool isAKeyPressed;
-    bool isDKeyPressed;
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
@@ -104,7 +102,7 @@ public:
 
     // 생성자 파괴자
     Game(unsigned int width, unsigned int height)
-    : State(GAME_ACTIVE), Keys(), Width(width), Height(height)
+    : State(GAME_MENU), Keys(), Width(width), Height(height)
     {
 
     }
@@ -144,10 +142,8 @@ public:
         // 플레이어
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
-        PLAYER_ACC_X = 6.0f;
-        PLAYER_ACC_Y = 6.0f;
-        isAKeyPressed = false;
-        isDKeyPressed = false;
+        PLAYER_ACC_X = 2400.0f;
+        PLAYER_ACC_Y = 1000.0f;
     }
 
     // 키보드 입력
@@ -155,57 +151,69 @@ public:
     {
         if (this->State == GAME_ACTIVE)
         {
-            float maxX = PLAYER_X_SPEED_MAX * dt;
+            float maxX = (PLAYER_X_SPEED_MAX);
+            float acc = (PLAYER_ACC_X * dt);
             // move ball.x
             if (this->Keys[GLFW_KEY_A])
             {
-                isAKeyPressed = true;
                 if (Player->Position.x >= 0.0f)
                 {
                     if(PLAYER_SPEED_X > -maxX) // 현재 속도가 최고 속도보다 낮을때 
                     {
-                        PLAYER_SPEED_X -= PLAYER_ACC_X * dt;
+                        PLAYER_SPEED_X -= acc;
                     }
                     else
                     {
                         PLAYER_SPEED_X = -maxX; // 속도가 최고 속도보다 높을경우 최고 속도로 고정
                     }
-                    this->Player->Position.x += PLAYER_SPEED_X;
+                    this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 }
             }
             else if (this->Keys[GLFW_KEY_D])
             {
-                isDKeyPressed = true;
                 if (Player->Position.x <= this->Width - Player->Size.x)
                 {
                     if(PLAYER_SPEED_X < maxX) // 현재 속도가 최고 속도보다 낮을때 
                     {
-                        PLAYER_SPEED_X += PLAYER_ACC_X * dt;
+                        PLAYER_SPEED_X += acc;
                     }
                     else
                     {
                         PLAYER_SPEED_X = maxX; // 속도가 최고 속도보다 높을경우 최고 속도로 고정
                     }
-                    this->Player->Position.x += PLAYER_SPEED_X;
+                    this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 }
             }
 
             // 관성, 가속도가 남아있는데 점점 줄어드는 것
             if(!this->Keys[GLFW_KEY_A] && !this->Keys[GLFW_KEY_D])
             {
-                if (PLAYER_SPEED_X > 0.1f)
+                if (PLAYER_SPEED_X > acc/2.0f)
                 {
-                    PLAYER_SPEED_X -= (PLAYER_ACC_X * dt)/2.0f;
-                    this->Player->Position.x += PLAYER_SPEED_X;
+                    PLAYER_SPEED_X -= (acc/3.0f);
+                    this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 }
-                else if(PLAYER_SPEED_X < -0.1f)
+                else if(PLAYER_SPEED_X < -acc/2.0f)
                 {
-                    PLAYER_SPEED_X += (PLAYER_ACC_X * dt)/2.0f;
-                    this->Player->Position.x += PLAYER_SPEED_X;
+                    PLAYER_SPEED_X += (acc/3.0f);
+                    this->Player->Position.x += (PLAYER_SPEED_X * dt);
+                }
+                else
+                {
+                    PLAYER_SPEED_X = 0;
                 }
             }
         }
+        
+        if (this->State == GAME_MENU)
+        {
+            if (this->Keys[GLFW_KEY_SPACE])
+            {
+                this->State = GAME_ACTIVE;
+            }
+        }
     }
+
     // 레벨 리셋
     void ResetLevel()
     {
@@ -248,7 +256,7 @@ public:
                                 box.Destroyed = true;
                             //일반 블록
                             if (box.Type == NORMAL || box.Type == BREAKABLE)
-                                PLAYER_SPEED_Y = -PLAYER_ACC_Y * 0.3f;
+                                PLAYER_SPEED_Y = -330.0f;
                         }
                         // DOWN
                         if(dir == DOWN)
@@ -286,17 +294,18 @@ public:
     // 공 낙하 가속함수
     void BallAccelation(float dt)
     {
-        float maxY = PLAYER_Y_SPEED_MAX * dt;
+        float maxY = (PLAYER_Y_SPEED_MAX);
+        float acc = (PLAYER_ACC_Y * dt);
         if(PLAYER_SPEED_Y < maxY) // 현재 속도가 최고 속도보다 낮을때 
         {
-            PLAYER_SPEED_Y += PLAYER_ACC_Y * dt;
+            PLAYER_SPEED_Y += acc;
         }
         else
         {
             PLAYER_SPEED_Y = maxY; // 속도가 최고 속도보다 높을경우 최고 속도로 고정
         }
-        //공이 계속 움직임
-        this->Player->Position.y += PLAYER_SPEED_Y;
+        //공이 아래로 계속 움직임
+        this->Player->Position.y += (PLAYER_SPEED_Y * dt);
     }
 
     // 게임 업데이트
@@ -323,6 +332,10 @@ public:
         this->Levels[this->Level].Draw(*Renderer);
         Player = this->Levels[this->Level].Ball;
         Player->Draw(*Renderer);
+    }
+
+    float getXSpeed(){
+        return PLAYER_SPEED_X;
     }
 
 };
