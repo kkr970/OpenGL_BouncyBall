@@ -241,16 +241,20 @@ public:
                         // UP
                         if(dir == UP)
                         {   
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
+                            Player->Position.y -= penetration;
                             //부서지는 불록
                             if (box.Type == BREAKABLE)
                                 box.Destroyed = true;
                             //일반 블록
                             if (box.Type == NORMAL || box.Type == BREAKABLE)
-                                PLAYER_SPEED_Y = -PLAYER_ACC_Y * 57.0f * dt;
+                                PLAYER_SPEED_Y = -PLAYER_ACC_Y * 0.3f;
                         }
                         // DOWN
                         if(dir == DOWN)
-                        {   
+                        {      
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
+                            Player->Position.y += penetration;
                             //부서지는 불록
                             if (box.Type == BREAKABLE)
                                 box.Destroyed = true;
