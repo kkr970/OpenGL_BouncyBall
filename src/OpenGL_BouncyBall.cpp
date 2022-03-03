@@ -67,20 +67,20 @@ int main(int argc, char *argv[])
         //입력
         BouncyBall.ProcessInput(deltaTime);
 
-        //게임 state update
-        BouncyBall.Update(deltaTime);
-
         //렌더링
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         BouncyBall.Render();
+
+        //게임 state update
+        BouncyBall.Update(deltaTime);
 
         glfwSwapBuffers(window);
     }
 
     ResourceManager::Clear();
 
-    glfwTerminate();
+    glfwTerminate(); 
     return 0;
 }
 

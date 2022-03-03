@@ -15,6 +15,9 @@
 class GameLevel
 {
 public:
+    // player
+    GameObject *Ball;
+    float radius = 7.0f;
     // level state
     std::vector<GameObject> Blocks;
     // constructor
@@ -100,7 +103,9 @@ private:
                 }
                 else if (tileData[y][x] == 8)	// START
                 {
-                    //공 오브젝트 추가
+                    glm::vec2 pos(unit_width * x + 14.0f, unit_height * y + 14.0f);
+                    glm::vec2 size(radius * 2.0f, radius * 2.0f);
+                    Ball = new GameObject(pos, size, ResourceManager::GetTexture("ball"), glm::vec3(1.0f));
                 }
                 else if (tileData[y][x] == 9)	// GOAL
                 {
