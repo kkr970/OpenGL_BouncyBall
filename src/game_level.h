@@ -76,7 +76,7 @@ private:
             for (unsigned int x = 0; x < width; ++x)
             {
                 // check block type from level data (2D level array)
-                // 0=빈공간, 1=기본, 2=충돌 시 파괴, 3=함정, 8=시작지점, 9=도착지점
+                // 0=빈공간, 1=기본, 2=충돌 시 파괴, 3=함정, 4=바운스, 5=좌우움돌, 6=상하움돌 8=시작지점, 9=도착지점
                 if (tileData[y][x] == 1) // NORMAL
                 {
                     glm::vec2 pos(unit_width * x, unit_height * y);
@@ -99,6 +99,30 @@ private:
                     glm::vec2 size(unit_width, unit_height);
                     GameObject obj(pos, size, ResourceManager::GetTexture("block_normal"), glm::vec3(0.8f, 0.3f, 0.3f));
                     obj.Type = TRAP;
+                    this->Blocks.push_back(obj);
+                }
+                else if (tileData[y][x] == 4)	// BOUNCE
+                {
+                    glm::vec2 pos(unit_width * x, unit_height * y);
+                    glm::vec2 size(unit_width, unit_height);
+                    GameObject obj(pos, size, ResourceManager::GetTexture("block_normal"), glm::vec3(0.8f, 0.3f, 0.8f));
+                    obj.Type = BOUNCE;
+                    this->Blocks.push_back(obj);
+                }
+                else if (tileData[y][x] == 5)	// LRMOVE
+                {
+                    glm::vec2 pos(unit_width * x + 0.1f, unit_height * y + 0.1f);
+                    glm::vec2 size(unit_width - 0.2f, unit_height - 0.2f);
+                    GameObject obj(pos, size, ResourceManager::GetTexture("block_lrmove"), glm::vec3(1.0f));
+                    obj.Type = LRMOVE;
+                    this->Blocks.push_back(obj);
+                }
+                else if (tileData[y][x] == 6)	// UDMOVE
+                {
+                    glm::vec2 pos(unit_width * x + 0.1f, unit_height * y + 0.1f);
+                    glm::vec2 size(unit_width - 0.2f, unit_height - 0.2f);
+                    GameObject obj(pos, size, ResourceManager::GetTexture("block_udmove"), glm::vec3(1.0f));
+                    obj.Type = UDMOVE;
                     this->Blocks.push_back(obj);
                 }
                 else if (tileData[y][x] == 8)	// START

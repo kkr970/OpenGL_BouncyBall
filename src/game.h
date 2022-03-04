@@ -44,9 +44,9 @@ Direction VectorDirection(glm::vec2 target)
 {
     glm::vec2 compass[] = {
         glm::vec2(0.0f, 1.0f),	// up
-        glm::vec2(1.0f, 0.0f),	// right
+        glm::vec2(-1.0f, 0.0f),	// right
         glm::vec2(0.0f, -1.0f),	// down
-        glm::vec2(-1.0f, 0.0f)	// left
+        glm::vec2(1.0f, 0.0f)	// left
     };
     float max = 0.0f;
     unsigned int best_match = -1;
@@ -60,6 +60,18 @@ Direction VectorDirection(glm::vec2 target)
         }
     }
     return (Direction)best_match;
+} 
+//충돌 함수 - 박스 박스
+bool CheckBoxCollision(GameObject &one, GameObject &two) //AABB-AABB
+{
+    //x축
+    bool collisionX = one.Position.x + one.Size.x >= two.Position.x &&
+        two.Position.x + two.Size.x >= one.Position.x;
+    //y축
+    bool collisionY = one.Position.y + one.Size.y >= two.Position.y &&
+        two.Position.y + two.Size.y >= one.Position.y;
+    //x, y둘다 감지되면 충돌
+    return collisionX && collisionY;
 } 
 //충돌 함수
 Collision CheckCollision(GameObject &one, GameObject &two) // AABB-Circle
@@ -98,7 +110,7 @@ public:
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
-    unsigned int maxLevel = 4;
+    unsigned int maxLevel = 10;
 
     // 생성자 파괴자
     Game(unsigned int width, unsigned int height)
@@ -129,6 +141,9 @@ public:
         ResourceManager::LoadTexture("resources/textures/block_normal.png", true, "block_normal");
         ResourceManager::LoadTexture("resources/textures/block_breakable.png", true, "block_breakable");
         ResourceManager::LoadTexture("resources/textures/block_goal.png", true, "block_goal");
+        ResourceManager::LoadTexture("resources/textures/block_lrmove.png", true, "block_lrmove");
+        ResourceManager::LoadTexture("resources/textures/block_udmove.png", true, "block_udmove");
+        ResourceManager::LoadTexture("resources/textures/block_movewall.png", true, "block_movewall");
         ResourceManager::LoadTexture("resources/textures/background.jpg", false, "background");
         // 레벨 로드
         for(int i = 1 ; i <= maxLevel ; i ++)
@@ -158,13 +173,13 @@ public:
             {
                 if (Player->Position.x >= 0.0f)
                 {
-                    if(PLAYER_SPEED_X > -maxX) // 현재 속도가 최고 속도보다 낮을때 
+                    if(PLAYER_SPEED_X >= -maxX) // 현재 속도가 최고 속도보다 낮을때 
                     {
                         PLAYER_SPEED_X -= acc;
                     }
                     else
                     {
-                        PLAYER_SPEED_X = -maxX; // 속도가 최고 속도보다 높을경우 최고 속도로 고정
+                        PLAYER_SPEED_X += (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
                     }
                     this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 }
@@ -173,13 +188,13 @@ public:
             {
                 if (Player->Position.x <= this->Width - Player->Size.x)
                 {
-                    if(PLAYER_SPEED_X < maxX) // 현재 속도가 최고 속도보다 낮을때 
+                    if(PLAYER_SPEED_X <= maxX) // 현재 속도가 최고 속도보다 낮을때 
                     {
                         PLAYER_SPEED_X += acc;
                     }
                     else
                     {
-                        PLAYER_SPEED_X = maxX; // 속도가 최고 속도보다 높을경우 최고 속도로 고정
+                        PLAYER_SPEED_X -= (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
                     }
                     this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 }
@@ -220,7 +235,40 @@ public:
         std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
         this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
         Player->Destroyed = false;
+        PLAYER_SPEED_X = 0.0f;
+        PLAYER_SPEED_Y = 0.0f;
     }
+
+    //움돌 함수
+    void moveBlock(float dt)
+    {
+        for (GameObject &box : this->Levels[this->Level].Blocks)
+        {
+            if(box.Type == LRMOVE)
+            {
+                if(box.Collision)
+                {
+                    box.Dir *= -1;
+                    box.Position.x += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
+                    box.Collision = false;
+                }
+                else
+                    box.Position.x += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
+            }
+            else if(box.Type == UDMOVE)
+            {
+                if(box.Collision)
+                {
+                    box.Dir *= -1;
+                    box.Position.y += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
+                    box.Collision = false;
+                }
+                else
+                    box.Position.y += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
+            }
+        }
+    }
+
 
     // 충돌 처리함수
     void DoCollisions(float dt)
@@ -235,57 +283,127 @@ public:
                 {
                     Direction dir = std::get<1>(collision);
                     glm::vec2 diff_vector = std::get<2>(collision);
+                    // 도착 9
                     if(box.Type == GOAL)
                     {
                         Level = (Level + 1) % maxLevel;
                         ResetLevel();
                     }
+                    // 함정 3
                     else if(box.Type == TRAP)
                     {
                         Player->Destroyed = true;
                     }
+                    // 나머지
                     else
                     {
-                        // UP
+                        // 위에서 충돌
                         if(dir == UP)
                         {   
                             float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
                             Player->Position.y -= penetration;
-                            //부서지는 불록
-                            if (box.Type == BREAKABLE)
-                                box.Destroyed = true;
-                            //일반 블록
-                            if (box.Type == NORMAL || box.Type == BREAKABLE)
+                            //일반 블록 1
+                            if (box.Type == NORMAL)
                                 PLAYER_SPEED_Y = -330.0f;
+                            //부서지는 불록 2
+                            else if (box.Type == BREAKABLE)
+                            {
+                                box.Destroyed = true;
+                                PLAYER_SPEED_Y = -330.0f;
+                            }
+                            //바운스 블록 4
+                            else if (box.Type == BOUNCE)
+                                PLAYER_SPEED_Y = -533.0f;
+                            //좌우 움돌 5
+                            else if (box.Type == LRMOVE)
+                                PLAYER_SPEED_Y = -330.0f;
+                            //상하 움돌 6
+                            else if (box.Type == UDMOVE)
+                                Player->Destroyed = true;
                         }
-                        // DOWN
+                        // 아래에서 충돌
                         if(dir == DOWN)
                         {      
                             float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
                             Player->Position.y += penetration;
-                            //부서지는 불록
-                            if (box.Type == BREAKABLE)
-                                box.Destroyed = true;
-                            //일반 블록
-                            if (box.Type == NORMAL || box.Type == BREAKABLE)
+                            //일반 블록 1
+                            if (box.Type == NORMAL)
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                            //부서지는 불록 2
+                            else if (box.Type == BREAKABLE)
+                            {
+                                box.Destroyed = true;
+                                PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                            }
+                            //바운스 블록 4
+                            else if (box.Type == BOUNCE)
+                                PLAYER_SPEED_Y = -PLAYER_SPEED_Y * 1.618f;
+                            //좌우 움돌 5
+                            else if (box.Type == LRMOVE)
+                                PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                            //상하 움돌 6
+                            else if (box.Type == UDMOVE)
+                                Player->Destroyed = true;
                         }
-                        // LEFT, RIGHT
-                        if(dir == LEFT || dir == RIGHT)
+                        // 왼쪽에서 충돌
+                        if(dir == LEFT)
                         {   
                             float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
-                            if(dir == LEFT) Player->Position.x += penetration;
-                            else Player->Position.x -= penetration;
-                            //부서지는 불록
+                            Player->Position.x -= penetration;
+                            //일반 블록 1
+                            if (box.Type == NORMAL)
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            //부서지는 불록 2
                             if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
                             }
-                            if (box.Type == NORMAL || box.Type == BREAKABLE)
-                            {   
-                                PLAYER_SPEED_X = -(PLAYER_SPEED_X);
-                            }
+                            //바운스 블록 4
+                            if (box.Type == BOUNCE)
+                                PLAYER_SPEED_X = -533.0f;
+                            //좌우 움돌 5
+                            if (box.Type == LRMOVE)
+                                Player->Destroyed = true;                                
+                            //상하 움돌 6
+                            if (box.Type == UDMOVE) 
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
                         }
+                        // 오른쪽에서 충돌
+                        if(dir == RIGHT)
+                        {
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
+                            Player->Position.x += penetration;
+                            //일반 블록 1
+                            if (box.Type == NORMAL)
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            //부서지는 불록 2
+                            if (box.Type == BREAKABLE)
+                            {
+                                box.Destroyed = true;
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            }
+                            //바운스 블록 4
+                            if (box.Type == BOUNCE)
+                                PLAYER_SPEED_X = 533.0f;
+                            //좌우 움돌 5
+                            if (box.Type == LRMOVE)
+                                Player->Destroyed = true;                                
+                            //상하 움돌 6
+                            if (box.Type == UDMOVE) 
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                        }
+                    }
+                }
+            }
+            if(box.Type == LRMOVE || box.Type == UDMOVE)
+            {
+                for (GameObject &box2 : this->Levels[this->Level].Blocks)
+                {
+                    bool collision = CheckBoxCollision(box2, box);
+                    if(collision && box.Collision == false && box.Position != box2.Position)
+                    {
+                        box.Collision = true;
                     }
                 }
             }
@@ -315,6 +433,7 @@ public:
         {
             this->BallAccelation(dt);
             this->DoCollisions(dt);
+            this->moveBlock(dt);
             //스테이지 실패
             if(Player->Position.y >= this->Height || Player->Destroyed)
             {
@@ -332,10 +451,6 @@ public:
         this->Levels[this->Level].Draw(*Renderer);
         Player = this->Levels[this->Level].Ball;
         Player->Draw(*Renderer);
-    }
-
-    float getXSpeed(){
-        return PLAYER_SPEED_X;
     }
 
 };

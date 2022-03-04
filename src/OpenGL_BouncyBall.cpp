@@ -75,8 +75,6 @@ int main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         BouncyBall.Render();
 
-        //std::cout << BouncyBall.getXSpeed() << std::endl;
-
         glfwSwapBuffers(window);
     }
 
