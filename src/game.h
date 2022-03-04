@@ -62,7 +62,7 @@ Direction VectorDirection(glm::vec2 target)
     return (Direction)best_match;
 } 
 //충돌 함수 - 박스 박스
-bool CheckBoxCollision(GameObject &one, GameObject &two) //AABB-AABB
+Collision CheckBoxCollision(GameObject &one, GameObject &two) //AABB-AABB
 {
     //x축
     bool collisionX = one.Position.x + one.Size.x >= two.Position.x &&
@@ -70,10 +70,29 @@ bool CheckBoxCollision(GameObject &one, GameObject &two) //AABB-AABB
     //y축
     bool collisionY = one.Position.y + one.Size.y >= two.Position.y &&
         two.Position.y + two.Size.y >= one.Position.y;
+    
+    //one의 중심
+    glm::vec2 one_half_extents(one.Size.x / 2.0f, one.Size.y / 2.0f);
+    glm::vec2 one_center(
+        one.Position.x + one_half_extents.x, 
+        one.Position.y + one_half_extents.y
+    );
+    //two의 중심
+    glm::vec2 two_half_extents(two.Size.x / 2.0f, two.Size.y / 2.0f);
+    glm::vec2 two_center(
+        two.Position.x + two_half_extents.x, 
+        two.Position.y + two_half_extents.y
+    );
+    //얼마나 깊이 들어갔는가 측정
+    glm::vec2 difference = one_center - two_center;
+    glm::vec2 clamped = glm::clamp(difference, -two_half_extents, two_half_extents);
+    glm::vec2 closest = two_center + clamped;
+    difference = closest - one_center;
     //x, y둘다 감지되면 충돌
-    return collisionX && collisionY;
+    return std::make_tuple(collisionX && collisionY, VectorDirection(difference), difference);
+
 } 
-//충돌 함수
+//충돌 함수 - 원 박스
 Collision CheckCollision(GameObject &one, GameObject &two) // AABB-Circle
 {
     // get center point circle first 
@@ -249,7 +268,6 @@ public:
                 if(box.Collision)
                 {
                     box.Dir *= -1;
-                    box.Position.x += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
                     box.Collision = false;
                 }
                 else
@@ -260,7 +278,6 @@ public:
                 if(box.Collision)
                 {
                     box.Dir *= -1;
-                    box.Position.y += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
                     box.Collision = false;
                 }
                 else
@@ -396,13 +413,35 @@ public:
                     }
                 }
             }
-            if(box.Type == LRMOVE || box.Type == UDMOVE)
+            if (box.Type == LRMOVE || box.Type == UDMOVE)
             {
                 for (GameObject &box2 : this->Levels[this->Level].Blocks)
                 {
-                    bool collision = CheckBoxCollision(box2, box);
-                    if(collision && box.Collision == false && box.Position != box2.Position)
+                    Collision collision = CheckBoxCollision(box, box2);
+                    Direction dir = std::get<1>(collision);
+                    glm::vec2 diff_vector = std::get<2>(collision);
+                    if(std::get<0>(collision) && box.Collision == false && box.Position != box2.Position)
                     {
+                        if(dir == UP)
+                        {
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
+                            box.Position.y += penetration * 0.1f;
+                        }
+                        else if(dir == DOWN)
+                        {
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
+                            box.Position.y -= penetration * 0.1f;
+                        }
+                        else if(dir == LEFT)
+                        {
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
+                            box.Position.x += penetration * 0.1f;
+                        }
+                        else if(dir == RIGHT)
+                        {
+                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
+                            box.Position.x -= penetration * 0.1f;
+                        }
                         box.Collision = true;
                     }
                 }
