@@ -7,12 +7,16 @@
 #include <string>
 #include <tuple>
 #include <algorithm>
+#include <math.h>
+
+#include <iostream>
 
 #include "shader.h"
 #include "texture.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
 #include "game_level.h"
+#include "text_renderer.h"
 
 //게임 state
 enum GameState{
@@ -121,15 +125,19 @@ class Game
 private:
     SpriteRenderer *Renderer;
     GameObject *Player;
+    TextRenderer *Text;
 
 public:
     GameState State;
     unsigned int Width, Height;
     bool Keys[1024];
+    bool KeysProcessed[1024];
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
-    unsigned int maxLevel = 10;
+    unsigned int maxLevel = 99;
+    unsigned int deathCount;
+    unsigned int fontSize;
 
     // 생성자 파괴자
     Game(unsigned int width, unsigned int height)
@@ -164,6 +172,10 @@ public:
         ResourceManager::LoadTexture("resources/textures/block_udmove.png", true, "block_udmove");
         ResourceManager::LoadTexture("resources/textures/block_movewall.png", true, "block_movewall");
         ResourceManager::LoadTexture("resources/textures/background.jpg", false, "background");
+        // text renderer, 글꼴 불러오기
+        Text = new TextRenderer(this->Width, this->Height);
+        fontSize = 72;
+        Text->Load("resources/fonts/MaplestoryFont_TTF/Maplestory Bold.ttf", fontSize);
         // 레벨 로드
         for(int i = 1 ; i <= maxLevel ; i ++)
         {
@@ -172,7 +184,6 @@ public:
             gamelevel.Load(path.c_str(), this->Width, this->Height);
             this->Levels.push_back(gamelevel);
         }
-        this->Level = 0;
         // 플레이어
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
@@ -183,44 +194,39 @@ public:
     // 키보드 입력
     void ProcessInput(float dt)
     {
+        // ACTIVE
         if (this->State == GAME_ACTIVE)
         {
             float maxX = (PLAYER_X_SPEED_MAX);
             float acc = (PLAYER_ACC_X * dt);
             // move ball.x
-            if (this->Keys[GLFW_KEY_A])
+            if (this->Keys[GLFW_KEY_A] || this->Keys[GLFW_KEY_LEFT])
             {
-                if (Player->Position.x >= 0.0f)
+                if(PLAYER_SPEED_X >= -maxX) // 현재 속도가 최고 속도보다 낮을때 
                 {
-                    if(PLAYER_SPEED_X >= -maxX) // 현재 속도가 최고 속도보다 낮을때 
-                    {
-                        PLAYER_SPEED_X -= acc;
-                    }
-                    else
-                    {
-                        PLAYER_SPEED_X += (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
-                    }
-                    this->Player->Position.x += (PLAYER_SPEED_X * dt);
+                    PLAYER_SPEED_X -= acc;
                 }
+                else
+                {
+                    PLAYER_SPEED_X += (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
+                }
+                this->Player->Position.x += (PLAYER_SPEED_X * dt);
             }
-            else if (this->Keys[GLFW_KEY_D])
+            else if (this->Keys[GLFW_KEY_D] || this->Keys[GLFW_KEY_RIGHT])
             {
-                if (Player->Position.x <= this->Width - Player->Size.x)
+                if(PLAYER_SPEED_X <= maxX) // 현재 속도가 최고 속도보다 낮을때 
                 {
-                    if(PLAYER_SPEED_X <= maxX) // 현재 속도가 최고 속도보다 낮을때 
-                    {
-                        PLAYER_SPEED_X += acc;
-                    }
-                    else
-                    {
-                        PLAYER_SPEED_X -= (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
-                    }
-                    this->Player->Position.x += (PLAYER_SPEED_X * dt);
+                    PLAYER_SPEED_X += acc;
                 }
+                else
+                {
+                    PLAYER_SPEED_X -= (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
+                }
+                this->Player->Position.x += (PLAYER_SPEED_X * dt);
             }
-
             // 관성, 가속도가 남아있는데 점점 줄어드는 것
-            if(!this->Keys[GLFW_KEY_A] && !this->Keys[GLFW_KEY_D])
+            if(!this->Keys[GLFW_KEY_A] && !this->Keys[GLFW_KEY_D] &&
+                !this->Keys[GLFW_KEY_LEFT] && !this->Keys[GLFW_KEY_RIGHT])
             {
                 if (PLAYER_SPEED_X > acc/2.0f)
                 {
@@ -237,13 +243,33 @@ public:
                     PLAYER_SPEED_X = 0;
                 }
             }
+
+            // 맵 리셋 버튼
+            if (this->Keys[GLFW_KEY_R] && !this->KeysProcessed[GLFW_KEY_R])
+            {
+                this->KeysProcessed[GLFW_KEY_R] = true;
+                ResetLevel();
+            }
         }
-        
+        // MENU
         if (this->State == GAME_MENU)
         {
-            if (this->Keys[GLFW_KEY_SPACE])
+            if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
             {
+                this->KeysProcessed[GLFW_KEY_SPACE] = true;
+                this->Level = 0;
+                this->deathCount = 0;
                 this->State = GAME_ACTIVE;
+            }
+        }
+        // WIN
+        if (this->State == GAME_WIN)
+        {
+            if(this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
+            {
+                this->KeysProcessed[GLFW_KEY_SPACE] = true;
+                this->ResetLevel();
+                this->State = GAME_MENU;
             }
         }
     }
@@ -256,6 +282,21 @@ public:
         Player->Destroyed = false;
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
+        deathCount++;
+    }
+    // 다음 레벨
+    void NextLevel()
+    {
+        if(this->Level < maxLevel - 1)
+        {
+            std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
+            this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
+            Player->Destroyed = false;
+            PLAYER_SPEED_X = 0.0f;
+            PLAYER_SPEED_Y = 0.0f;
+        }
+        else
+            this->State = GAME_WIN;
     }
 
     //움돌 함수
@@ -300,11 +341,12 @@ public:
                 {
                     Direction dir = std::get<1>(collision);
                     glm::vec2 diff_vector = std::get<2>(collision);
+                    std::cout << dir << std::endl;
                     // 도착 9
                     if(box.Type == GOAL)
                     {
                         Level = (Level + 1) % maxLevel;
-                        ResetLevel();
+                        NextLevel();
                     }
                     // 함정 3
                     else if(box.Type == TRAP)
@@ -410,6 +452,11 @@ public:
                             if (box.Type == UDMOVE) 
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                         }
+                        // 공이 내부로 뚫고 들어간 경우 - 확인된 상황이 움돌에 끼는 경우, 파괴가 적당함
+                        if(dir == -1)
+                        {
+                            Player->Destroyed = true;
+                        }
                     }
                 }
             }
@@ -483,13 +530,47 @@ public:
     // 게임화면 렌더링
     void Render()
     {   
-        // draw background
-        Texture2D background = ResourceManager::GetTexture("background");
-        Renderer->DrawSprite(background, glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);
-        // draw level
-        this->Levels[this->Level].Draw(*Renderer);
-        Player = this->Levels[this->Level].Ball;
-        Player->Draw(*Renderer);
+        if(this->State == GAME_MENU)
+        {
+            // draw background
+            Texture2D background = ResourceManager::GetTexture("background");
+            Renderer->DrawSprite(background, glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);
+            // draw text
+            std::stringstream ss1; ss1 << "BOUNCY BALL";
+            float moveText = abs(sin(glfwGetTime() * 3.0f)) * 30.0f;
+            Text->RenderText(ss1.str(), 165.0f, (220.0f - moveText) , 1.0f, glm::vec3(0.0f, 0.8f, 0.5f));
+            std::stringstream ss2; ss2 << "Press 'SPACE' to Start!!";
+            Text->RenderText(ss2.str(), 255.0f, 280.0f, 0.333f, glm::vec3(0.0f));
+            std::stringstream ss3; ss3 << "Left : A, left // Right : D, right // Reset : R // Quit : ESC";
+            Text->RenderText(ss3.str(), 180.0f, 330.0f, 0.25f, glm::vec3(0.0f));
+        }
+        if(this->State == GAME_ACTIVE)
+        {
+            // draw background
+            Texture2D background = ResourceManager::GetTexture("background");
+            Renderer->DrawSprite(background, glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);
+            // draw level
+            this->Levels[this->Level].Draw(*Renderer);
+            Player = this->Levels[this->Level].Ball;
+            Player->Draw(*Renderer);
+            // draw text
+            std::stringstream ss; ss<<this->deathCount;
+            Text->RenderText("Death : "+ss.str(), 5.0f, 5.0f, 0.33f, glm::vec3(0.0f));
+        }
+        if(this->State == GAME_WIN)
+        {
+            // draw background
+            Texture2D background = ResourceManager::GetTexture("background");
+            Renderer->DrawSprite(background, glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);
+            // draw text
+            std::stringstream ss1; ss1 << "Thanks for Playing!";
+            float moveText = abs(sin(glfwGetTime() * 3.0f)) * 30.0f;
+            Text->RenderText(ss1.str(), 70.0f, (220.0f) , 1.0f, glm::vec3(0.0f, 0.8f, 0.5f));
+            std::stringstream ss2; ss2 << "Your Death Count! : " << deathCount;
+            Text->RenderText(ss2.str(), 270.0f, 290.0f, 0.333f, glm::vec3(0.0f));
+            std::stringstream ss3; ss3 << "Press 'SPACE' to Menu!!";
+            Text->RenderText(ss3.str(), 290.0f, 330.0f, 0.25f, glm::vec3(0.0f));
+        }
     }
 
 };

@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_SAMPLES, 4); 
 
     glfwWindowHint(GLFW_RESIZABLE, false);
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         glfwPollEvents();
-
+ 
         //게임 state update
         BouncyBall.Update(deltaTime);
 
@@ -75,13 +75,13 @@ int main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         BouncyBall.Render();
 
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(window); 
     }
 
     ResourceManager::Clear();
 
     glfwTerminate(); 
-    return 0;
+    return 0; 
 }
 
 void key_callback(GLFWwindow* window, int key, int  scancode, int action, int mode)
@@ -95,8 +95,11 @@ void key_callback(GLFWwindow* window, int key, int  scancode, int action, int mo
         if (action == GLFW_PRESS)
             BouncyBall.Keys[key] = true;
         else if (action == GLFW_RELEASE)
+        {
             BouncyBall.Keys[key] = false;
-    } 
+            BouncyBall.KeysProcessed[key] = false;
+        }
+    }
     
 }
 
