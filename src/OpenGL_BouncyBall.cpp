@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //Multi Sampling 사용
-    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE); 
 
     //타이밍 관련
     float deltaTime = 0.0f;

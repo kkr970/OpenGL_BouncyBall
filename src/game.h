@@ -171,6 +171,8 @@ public:
         ResourceManager::LoadTexture("resources/textures/block_lrmove.png", true, "block_lrmove");
         ResourceManager::LoadTexture("resources/textures/block_udmove.png", true, "block_udmove");
         ResourceManager::LoadTexture("resources/textures/block_movewall.png", true, "block_movewall");
+        ResourceManager::LoadTexture("resources/textures/block_rightdir.png", true, "block_rightdir");
+        ResourceManager::LoadTexture("resources/textures/block_leftdir.png", true, "block_leftdir");
         ResourceManager::LoadTexture("resources/textures/background.jpg", false, "background");
         // text renderer, 글꼴 불러오기
         Text = new TextRenderer(this->Width, this->Height);
@@ -211,6 +213,8 @@ public:
                     PLAYER_SPEED_X += (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
                 }
                 this->Player->Position.x += (PLAYER_SPEED_X * dt);
+                // 직진상태일 때, 누르면 직진성을 제거
+                if(Player->isDirectional) Player->isDirectional = false;
             }
             else if (this->Keys[GLFW_KEY_D] || this->Keys[GLFW_KEY_RIGHT])
             {
@@ -223,10 +227,13 @@ public:
                     PLAYER_SPEED_X -= (acc/3.0f); // 속도가 최고 속도보다 높을경우 관성처럼 속도가 조금씩 줄어듬
                 }
                 this->Player->Position.x += (PLAYER_SPEED_X * dt);
+                // 직진상태일 때, 누르면 직진성을 제거
+                if(Player->isDirectional) Player->isDirectional = false;
             }
             // 관성, 가속도가 남아있는데 점점 줄어드는 것
             if(!this->Keys[GLFW_KEY_A] && !this->Keys[GLFW_KEY_D] &&
-                !this->Keys[GLFW_KEY_LEFT] && !this->Keys[GLFW_KEY_RIGHT])
+                !this->Keys[GLFW_KEY_LEFT] && !this->Keys[GLFW_KEY_RIGHT] &&
+                !(Player->isDirectional) )
             {
                 if (PLAYER_SPEED_X > acc/2.0f)
                 {
@@ -257,7 +264,7 @@ public:
             if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
             {
                 this->KeysProcessed[GLFW_KEY_SPACE] = true;
-                this->Level = 5;
+                this->Level = 7;
                 this->deathCount = 0;
                 this->State = GAME_ACTIVE;
             }
@@ -280,6 +287,7 @@ public:
         std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
         this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
         Player->Destroyed = false;
+        Player->isDirectional = false;
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
         deathCount++;
@@ -329,6 +337,7 @@ public:
                 {
                     Direction dir = std::get<1>(collision);
                     glm::vec2 diff_vector = std::get<2>(collision);
+                    Player->isDirectional = false;
                     // 도착 9
                     if(box.Type == GOAL)
                     {
@@ -366,6 +375,22 @@ public:
                             //상하 움돌 6
                             else if (box.Type == UDMOVE)
                                 Player->Destroyed = true;
+                            //우직진블록 10
+                            else if (box.Type == RIGHTDIR)
+                            {
+                                Player->isDirectional = true;
+                                PLAYER_SPEED_X = PLAYER_Y_SPEED_MAX;
+                                Player->Position = glm::vec2( ( box.Position.x + box.Size.x + 0.01f ),
+                                                              ( box.Position.y + (box.Size.y/2.0f) - PLAYER_RADIUS ));
+                            }
+                            //좌직진블록 11
+                            else if (box.Type == LEFTDIR)
+                            {
+                                Player->isDirectional = true;
+                                PLAYER_SPEED_X = -PLAYER_Y_SPEED_MAX;
+                                Player->Position = glm::vec2( ( box.Position.x - (PLAYER_RADIUS*2.0f) - 0.01f ),
+                                                              ( box.Position.y + (box.Size.y/2.0f) - PLAYER_RADIUS ));
+                            }
                         }
                         // 아래에서 충돌
                         if(dir == DOWN)
@@ -390,6 +415,12 @@ public:
                             //상하 움돌 6
                             else if (box.Type == UDMOVE)
                                 Player->Destroyed = true;
+                            //우직진블록 10
+                            else if (box.Type == RIGHTDIR)
+                                PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                            //좌직진블록 11
+                            else if (box.Type == LEFTDIR)
+                                PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
                         }
                         // 왼쪽에서 충돌
                         if(dir == LEFT)
@@ -400,19 +431,25 @@ public:
                             if (box.Type == NORMAL)
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                             //부서지는 불록 2
-                            if (box.Type == BREAKABLE)
+                            else if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                             }
                             //바운스 블록 4
-                            if (box.Type == BOUNCE)
+                            else if (box.Type == BOUNCE)
                                 PLAYER_SPEED_X = -533.0f;
                             //좌우 움돌 5
-                            if (box.Type == LRMOVE)
+                            else if (box.Type == LRMOVE)
                                 Player->Destroyed = true;                                
                             //상하 움돌 6
-                            if (box.Type == UDMOVE) 
+                            else if (box.Type == UDMOVE) 
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            //우직진블록 10
+                            else if (box.Type == RIGHTDIR)
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            //좌직진블록 11
+                            else if (box.Type == LEFTDIR)
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                         }
                         // 오른쪽에서 충돌
@@ -424,19 +461,25 @@ public:
                             if (box.Type == NORMAL)
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                             //부서지는 불록 2
-                            if (box.Type == BREAKABLE)
+                            else if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                             }
                             //바운스 블록 4
-                            if (box.Type == BOUNCE)
+                            else if (box.Type == BOUNCE)
                                 PLAYER_SPEED_X = 533.0f;
                             //좌우 움돌 5
-                            if (box.Type == LRMOVE)
+                            else if (box.Type == LRMOVE)
                                 Player->Destroyed = true;                                
                             //상하 움돌 6
-                            if (box.Type == UDMOVE) 
+                            else if (box.Type == UDMOVE) 
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            //우직진블록 10
+                            else if (box.Type == RIGHTDIR)
+                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            //좌직진블록 11
+                            else if (box.Type == LEFTDIR)
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
                         }
                         // 공이 내부로 뚫고 들어간 경우 - 확인된 상황이 움돌에 끼는 경우, 파괴가 적당함
@@ -496,8 +539,13 @@ public:
         {
             PLAYER_SPEED_Y = maxY; // 속도가 최고 속도보다 높을경우 최고 속도로 고정
         }
-        //공이 아래로 계속 움직임
         this->Player->Position.y += (PLAYER_SPEED_Y * dt);
+    }
+    // 공 직진 함수
+    void BallDirectional(float dt)
+    {
+        this->Player->Position.x += PLAYER_SPEED_X * dt;
+        
     }
 
     // 게임 업데이트
@@ -505,7 +553,12 @@ public:
     {
         if(State == GAME_ACTIVE)
         {
-            this->BallAccelation(dt);
+            std::cout << Player->isDirectional << std::endl;
+            if(!Player->isDirectional)
+                this->BallAccelation(dt);
+            else
+                BallDirectional(dt);
+
             this->DoCollisions(dt);
             this->moveBlock(dt);
             //스테이지 실패

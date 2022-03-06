@@ -75,8 +75,8 @@ private:
         {
             for (unsigned int x = 0; x < width; ++x)
             {
-                // check block type from level data (2D level array)
-                // 0=빈공간, 1=기본, 2=충돌 시 파괴, 3=함정, 4=바운스, 5=좌우움돌, 6=상하움돌 8=시작지점, 9=도착지점
+                //  0=빈공간,  1=기본,  2=충돌파괴, 3=함정,  4=바운스, 5=좌우움돌, 6=상하움돌, 8=시작지점, 9=도착지점
+                // 10=우직진, 11=좌직진
                 if (tileData[y][x] == 1) // NORMAL
                 {
                     glm::vec2 pos(unit_width * x, unit_height * y);
@@ -137,6 +137,22 @@ private:
                     glm::vec2 size(unit_width, unit_height);
                     GameObject obj(pos, size, ResourceManager::GetTexture("block_goal"), glm::vec3(1.0f));
                     obj.Type = GOAL;
+                    this->Blocks.push_back(obj);
+                }
+                else if (tileData[y][x] == 10)  // RIGHTDIR
+                {
+                    glm::vec2 pos(unit_width * x, unit_height * y);
+                    glm::vec2 size(unit_width, unit_height);
+                    GameObject obj(pos, size, ResourceManager::GetTexture("block_rightdir"), glm::vec3(1.0f, 1.0f, 0.3f));
+                    obj.Type = RIGHTDIR;
+                    this->Blocks.push_back(obj);
+                }
+                else if (tileData[y][x] == 11)  // LEFTDIR
+                {
+                    glm::vec2 pos(unit_width * x, unit_height * y);
+                    glm::vec2 size(unit_width, unit_height);
+                    GameObject obj(pos, size, ResourceManager::GetTexture("block_leftdir"), glm::vec3(1.0f, 1.0f, 0.3f));
+                    obj.Type = LEFTDIR;
                     this->Blocks.push_back(obj);
                 }
             }
