@@ -257,7 +257,7 @@ public:
             if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
             {
                 this->KeysProcessed[GLFW_KEY_SPACE] = true;
-                this->Level = 0;
+                this->Level = 5;
                 this->deathCount = 0;
                 this->State = GAME_ACTIVE;
             }
@@ -306,23 +306,11 @@ public:
         {
             if(box.Type == LRMOVE)
             {
-                if(box.Collision)
-                {
-                    box.Dir *= -1;
-                    box.Collision = false;
-                }
-                else
-                    box.Position.x += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
+                box.Position.x += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
             }
             else if(box.Type == UDMOVE)
             {
-                if(box.Collision)
-                {
-                    box.Dir *= -1;
-                    box.Collision = false;
-                }
-                else
-                    box.Position.y += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
+                box.Position.y += (box.Dir * (PLAYER_X_SPEED_MAX * 0.75 * dt));
             }
         }
     }
@@ -341,7 +329,6 @@ public:
                 {
                     Direction dir = std::get<1>(collision);
                     glm::vec2 diff_vector = std::get<2>(collision);
-                    std::cout << dir << std::endl;
                     // 도착 9
                     if(box.Type == GOAL)
                     {
@@ -460,6 +447,7 @@ public:
                     }
                 }
             }
+            //움돌 충돌
             if (box.Type == LRMOVE || box.Type == UDMOVE)
             {
                 for (GameObject &box2 : this->Levels[this->Level].Blocks)
@@ -467,29 +455,29 @@ public:
                     Collision collision = CheckBoxCollision(box, box2);
                     Direction dir = std::get<1>(collision);
                     glm::vec2 diff_vector = std::get<2>(collision);
-                    if(std::get<0>(collision) && box.Collision == false && box.Position != box2.Position)
+                    if(std::get<0>(collision) && box.Position != box2.Position)
                     {
+                        box.Dir *= -1;
                         if(dir == UP)
                         {
-                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
-                            box.Position.y += penetration * 0.1f;
+                            float penetration = box.Size.y/2.0f - std::abs(diff_vector.y) + 0.05f;
+                            box.Position.y -= penetration;
                         }
                         else if(dir == DOWN)
                         {
-                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
-                            box.Position.y -= penetration * 0.1f;
+                            float penetration = box.Size.y/2.0f - std::abs(diff_vector.y) + 0.05f;
+                            box.Position.y += penetration;
                         }
                         else if(dir == LEFT)
                         {
-                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
-                            box.Position.x += penetration * 0.1f;
+                            float penetration = box.Size.x/2.0f - std::abs(diff_vector.x) + 0.05f;
+                            box.Position.x -= penetration;
                         }
                         else if(dir == RIGHT)
                         {
-                            float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
-                            box.Position.x -= penetration * 0.1f;
+                            float penetration = box.Size.x/2.0f - std::abs(diff_vector.x) + 0.05f;
+                            box.Position.x += penetration;
                         }
-                        box.Collision = true;
                     }
                 }
             }
