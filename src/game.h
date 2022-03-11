@@ -17,6 +17,7 @@
 #include "sprite_renderer.h"
 #include "game_level.h"
 #include "text_renderer.h"
+#include "particle_generator.h"
 
 //게임 state
 enum GameState{
@@ -126,6 +127,7 @@ private:
     SpriteRenderer *Renderer;
     GameObject *Player;
     TextRenderer *Text;
+    ParticleGenerator *Particles;
 
 public:
     GameState State;
@@ -148,6 +150,9 @@ public:
     ~Game()
     {
         delete Renderer;
+        delete Player;
+        delete Text;
+        delete Particles;
     }
 
     // 게임 초기설정, 초기화
@@ -155,14 +160,14 @@ public:
     {
         // 쉐이더 로드
         ResourceManager::LoadShader("src/shader/sprite.vs", "src/shader/sprite.fs", nullptr, "sprite");
+        ResourceManager::LoadShader("src/shader/particle.vs", "src/shader/particle.fs", nullptr, "particle");
         // 쉐이더 데이터 전달
         glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width),
             static_cast<float>(this->Height), 0.0f, -1.0f, 1.0f);
         ResourceManager::GetShader("sprite").Use().SetInteger("image", 0);
-        ResourceManager::GetShader("sprite").SetMatrix4("projection", projection);
-        // private 변수에 쉐이더 전달
-        Shader spriteshader = ResourceManager::GetShader("sprite");
-        Renderer = new SpriteRenderer(spriteshader);
+        ResourceManager::GetShader("sprite").Use().SetMatrix4("projection", projection);
+        ResourceManager::GetShader("particle").Use().SetInteger("sprite", 0);
+        ResourceManager::GetShader("particle").Use().SetMatrix4("projection", projection); 
         // texture 불러오기
         ResourceManager::LoadTexture("resources/textures/ball.png", true, "ball");
         ResourceManager::LoadTexture("resources/textures/block_normal.png", true, "block_normal");
@@ -174,6 +179,12 @@ public:
         ResourceManager::LoadTexture("resources/textures/block_rightdir.png", true, "block_rightdir");
         ResourceManager::LoadTexture("resources/textures/block_leftdir.png", true, "block_leftdir");
         ResourceManager::LoadTexture("resources/textures/background.jpg", false, "background");
+        ResourceManager::LoadTexture("resources/textures/particle.png", true, "particle");
+        // private 변수에 쉐이더 전달
+        Shader spriteshader = ResourceManager::GetShader("sprite");
+        Renderer = new SpriteRenderer(spriteshader);
+        Shader particleshader = ResourceManager::GetShader("particle");
+        Particles = new ParticleGenerator(particleshader, ResourceManager::GetTexture("particle"), 500);
         // text renderer, 글꼴 불러오기
         Text = new TextRenderer(this->Width, this->Height);
         fontSize = 72;
@@ -264,7 +275,7 @@ public:
             if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
             {
                 this->KeysProcessed[GLFW_KEY_SPACE] = true;
-                this->Level = 7;
+                this->Level = 0;
                 this->deathCount = 0;
                 this->State = GAME_ACTIVE;
             }
@@ -545,7 +556,6 @@ public:
     void BallDirectional(float dt)
     {
         this->Player->Position.x += PLAYER_SPEED_X * dt;
-        
     }
 
     // 게임 업데이트
@@ -553,7 +563,6 @@ public:
     {
         if(State == GAME_ACTIVE)
         {
-            std::cout << Player->isDirectional << std::endl;
             if(!Player->isDirectional)
                 this->BallAccelation(dt);
             else
@@ -561,6 +570,7 @@ public:
 
             this->DoCollisions(dt);
             this->moveBlock(dt);
+            Particles->Update(dt, *Player, 2, glm::vec2(PLAYER_RADIUS / 3.0f) );
             //스테이지 실패
             if(Player->Position.y >= this->Height || Player->Destroyed)
             {
@@ -592,10 +602,13 @@ public:
             Renderer->DrawSprite(background, glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);
             // draw level
             this->Levels[this->Level].Draw(*Renderer);
+            // draw particles
+            Particles->Draw();
+            // draw player
             Player = this->Levels[this->Level].Ball;
             Player->Draw(*Renderer);
             // draw text
-            std::stringstream ss; ss<<this->deathCount;
+            std::stringstream ss; ss << this->deathCount;
             Text->RenderText("Death : "+ss.str(), 5.0f, 5.0f, 0.33f, glm::vec3(0.0f));
         }
         if(this->State == GAME_WIN)
