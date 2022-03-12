@@ -142,7 +142,7 @@ public:
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
-    unsigned int maxLevel = 99;
+    unsigned int maxLevel = 8;
     unsigned int deathCount;
     unsigned int fontSize;
 
@@ -372,6 +372,7 @@ public:
                     if(box.Type == GOAL)
                     {
                         Level = (Level + 1) % maxLevel;
+                        SoundEngine->play2D("resources/audio/block_goal.mp3");
                         NextLevel();
                     }
                     // 함정 3
@@ -689,9 +690,9 @@ public:
             this->DoCollisions(dt);
             this->moveBlock(dt);
             Particles->Update(dt, *Player, 2, glm::vec2(PLAYER_RADIUS / 2.65f) );
-            std::cout << PLAYER_SPEED_X << std::endl;
             //스테이지 실패
-            if(Player->Position.y >= this->Height || Player->Destroyed)
+            if(Player->Position.y >= this->Height || Player->Position.x <= 0.0f ||
+                 Player->Position.x >= (this->Width + Player->Size.x) || Player->Destroyed)
             {
                 ResetLevel();
             }
