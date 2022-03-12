@@ -311,6 +311,12 @@ public:
         }
     }
 
+    // 플레이어 데스카운트 +1
+    void playerDeath()
+    {
+        deathCount++;
+        ResetLevel();
+    }
     // 레벨 리셋
     void ResetLevel()
     {
@@ -321,21 +327,12 @@ public:
         Particles->deleteParticle();
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
-        deathCount++;
     }
     // 다음 레벨
     void NextLevel()
     {
-        if(this->Level < maxLevel - 1)
-        {
-            std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
-            this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
-            Player->Destroyed = false;
-            Particles->deleteParticle();
-            PLAYER_SPEED_X = 0.0f;
-            PLAYER_SPEED_Y = 0.0f;
-        }
-        else
+        this->Level = (this->Level + 1);
+        if(this->Level >= maxLevel - 1)
             this->State = GAME_WIN;
     }
 
@@ -373,8 +370,8 @@ public:
                     // 도착 9
                     if(box.Type == GOAL)
                     {
-                        Level = (Level + 1) % maxLevel;
                         SoundEngine->play2D("resources/audio/block_goal.mp3");
+                        ResetLevel();
                         NextLevel();
                     }
                     // 함정 3
@@ -696,7 +693,7 @@ public:
             if(Player->Position.y >= this->Height || Player->Position.x <= 0.0f ||
                  Player->Position.x >= (this->Width + Player->Size.x) || Player->Destroyed)
             {
-                ResetLevel();
+                playerDeath();
             }
         }
     }
