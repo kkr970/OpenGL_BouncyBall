@@ -71,6 +71,12 @@ public:
             }
         }
     }
+    // delete particle
+    void deleteParticle()
+    {
+        particles.clear();
+        this->init();
+    }
 
 private:
     // state
@@ -142,6 +148,7 @@ private:
         particle.Life = 1.0f;
         particle.Velocity = object.Velocity * 0.1f;
     }
+    
 };
 
 #endif

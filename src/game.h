@@ -318,6 +318,7 @@ public:
         this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
         Player->Destroyed = false;
         Player->isDirectional = false;
+        Particles->deleteParticle();
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
         deathCount++;
@@ -330,6 +331,7 @@ public:
             std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
             this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
             Player->Destroyed = false;
+            Particles->deleteParticle();
             PLAYER_SPEED_X = 0.0f;
             PLAYER_SPEED_Y = 0.0f;
         }
