@@ -142,7 +142,7 @@ public:
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
-    unsigned int maxLevel = 8;
+    unsigned int maxLevel = 3;
     unsigned int deathCount;
     unsigned int fontSize;
 
@@ -332,7 +332,7 @@ public:
     void NextLevel()
     {
         this->Level = (this->Level + 1);
-        if(this->Level >= maxLevel - 1)
+        if(this->Level >= maxLevel)
             this->State = GAME_WIN;
     }
 
@@ -727,8 +727,10 @@ public:
             Player = this->Levels[this->Level].Ball;
             Player->Draw(*Renderer);
             // draw text
-            std::stringstream ss; ss << this->deathCount;
-            Text->RenderText("Death : "+ss.str(), 5.0f, 5.0f, 0.33f, glm::vec3(0.0f));
+            std::stringstream lv; lv << this->Level + 1;
+            Text->RenderText("Level : " + lv.str(), 5.0f, 5.0f, 0.33f, glm::vec3(0.0f));
+            std::stringstream dc; dc << this->deathCount;
+            Text->RenderText("Death : " + dc.str(), 5.0f, 30.0f, 0.33f, glm::vec3(0.0f));
         }
         if(this->State == GAME_WIN)
         {
