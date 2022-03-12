@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
     glfwWindowHint(GLFW_RESIZABLE, false);
 
-    GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "OpenGL_BouncyBall // kkr970 (Shin-Icksu)", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "OpenGL_BouncyBall // kkr970 (Shin-Icksu) // h:ICKSU", nullptr, nullptr);
     glfwMakeContextCurrent(window); 
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))

@@ -133,6 +133,7 @@ private:
     ParticleGenerator *Particles;
     ISoundEngine *SoundEngine = createIrrKlangDevice();
     ISound *Bgm;
+    bool hidden;
 
 public:
     GameState State;
@@ -142,7 +143,7 @@ public:
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
-    unsigned int maxLevel = 8;
+    unsigned int maxLevel = 9;
     unsigned int deathCount;
     unsigned int fontSize;
 
@@ -201,13 +202,14 @@ public:
         if(Bgm)
             Bgm->setVolume(0.3f);
         // 레벨 로드
-        for(int i = 1 ; i <= maxLevel ; i++)
+        for(int i = 1 ; i <= maxLevel + 1 ; i++)
         {
             GameLevel gamelevel;
             std::string path = "resources/gamelevels/"+std::to_string(i)+".txt";
             gamelevel.Load(path.c_str(), this->Width, this->Height);
             this->Levels.push_back(gamelevel);
         }
+        hidden = true;
         // 게임 데이터 초기화
         this->Level = 0;
         this->deathCount = 0;
@@ -299,6 +301,13 @@ public:
                 this->KeysProcessed[GLFW_KEY_SPACE] = true;
                 this->State = GAME_ACTIVE;
             }
+            if (this->Keys[GLFW_KEY_I] && this->Keys[GLFW_KEY_C] && this->Keys[GLFW_KEY_K] &&
+                this->Keys[GLFW_KEY_S] && this->Keys[GLFW_KEY_U] && hidden)
+            {
+                hidden = false;
+                this->Level = 9;
+                this->State = GAME_ACTIVE;
+            }
         }
         // WIN
         else if (this->State == GAME_WIN)
@@ -318,6 +327,11 @@ public:
     void playerDeath()
     {
         deathCount++;
+
+        // 한번이라도 죽으면 hidden false
+        if(hidden)
+            hidden = false;
+
         ResetLevel();
     }
     // 플레이어 리셋
@@ -342,7 +356,16 @@ public:
         if(this->Level < maxLevel - 1)
             this->Level++;
         else
-            this->State = GAME_WIN;
+        {
+            //hidden이 true면 히든맵 도전
+            if(hidden)
+            {
+                this->Level = 9;
+                hidden = false;
+            }
+            else
+                this->State = GAME_WIN;
+        }
     }
 
     //움돌 함수
