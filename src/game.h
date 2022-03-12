@@ -142,7 +142,7 @@ public:
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
-    unsigned int maxLevel = 3;
+    unsigned int maxLevel = 8;
     unsigned int deathCount;
     unsigned int fontSize;
 
@@ -201,13 +201,16 @@ public:
         if(Bgm)
             Bgm->setVolume(0.3f);
         // 레벨 로드
-        for(int i = 1 ; i <= maxLevel ; i ++)
+        for(int i = 1 ; i <= maxLevel ; i++)
         {
             GameLevel gamelevel;
             std::string path = "resources/gamelevels/"+std::to_string(i)+".txt";
             gamelevel.Load(path.c_str(), this->Width, this->Height);
             this->Levels.push_back(gamelevel);
         }
+        // 게임 데이터 초기화
+        this->Level = 0;
+        this->deathCount = 0;
         // 플레이어
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
@@ -285,26 +288,26 @@ public:
             if (this->Keys[GLFW_KEY_R] && !this->KeysProcessed[GLFW_KEY_R])
             {
                 this->KeysProcessed[GLFW_KEY_R] = true;
-                ResetLevel();
+                playerDeath();
             }
         }
         // MENU
-        if (this->State == GAME_MENU)
+        else if (this->State == GAME_MENU)
         {
             if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
             {
                 this->KeysProcessed[GLFW_KEY_SPACE] = true;
-                this->Level = 0;
-                this->deathCount = 0;
                 this->State = GAME_ACTIVE;
             }
         }
         // WIN
-        if (this->State == GAME_WIN)
+        else if (this->State == GAME_WIN)
         {
             if(this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE])
             {
                 this->KeysProcessed[GLFW_KEY_SPACE] = true;
+                this->Level = 0;
+                this->deathCount = 0;
                 this->ResetLevel();
                 this->State = GAME_MENU;
             }
@@ -317,22 +320,28 @@ public:
         deathCount++;
         ResetLevel();
     }
-    // 레벨 리셋
-    void ResetLevel()
+    // 플레이어 리셋
+    void ResetPlayer()
     {
-        std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
-        this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
         Player->Destroyed = false;
         Player->isDirectional = false;
         Particles->deleteParticle();
         PLAYER_SPEED_X = 0.0f;
         PLAYER_SPEED_Y = 0.0f;
     }
+    // 레벨 리셋
+    void ResetLevel()
+    {
+        std::string path = "resources/gamelevels/"+std::to_string(this->Level+1)+".txt";
+        this->Levels[this->Level].Load(path.c_str(), this->Width, this->Height);
+        ResetPlayer();
+    }
     // 다음 레벨
     void NextLevel()
     {
-        this->Level = (this->Level + 1);
-        if(this->Level >= maxLevel)
+        if(this->Level < maxLevel - 1)
+            this->Level++;
+        else
             this->State = GAME_WIN;
     }
 
@@ -352,7 +361,6 @@ public:
         }
     }
 
-
     // 충돌 처리함수
     void DoCollisions(float dt)
     {
@@ -371,7 +379,6 @@ public:
                     if(box.Type == GOAL)
                     {
                         SoundEngine->play2D("resources/audio/block_goal.mp3");
-                        ResetLevel();
                         NextLevel();
                     }
                     // 함정 3
@@ -626,7 +633,7 @@ public:
                     Collision collision = CheckBoxCollision(box, box2);
                     Direction dir = std::get<1>(collision);
                     glm::vec2 diff_vector = std::get<2>(collision);
-                    if(std::get<0>(collision) && box.Position != box2.Position)
+                    if(std::get<0>(collision) && box.Position != box2.Position && !box2.Destroyed)
                     {
                         box.Dir *= -1;
                         if(dir == UP)

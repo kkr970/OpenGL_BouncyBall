@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
 void key_callback(GLFWwindow* window, int key, int  scancode, int action, int mode)
 {
-    // dESC 종료 버튼
+    // ESC 종료 버튼
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     // 나머지 key 입력 확인
