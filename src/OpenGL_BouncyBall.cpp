@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
     //렌더링 함수
     while (!glfwWindowShouldClose(window))
-    {
+    { 
         //delta 시간
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
 void key_callback(GLFWwindow* window, int key, int  scancode, int action, int mode)
 {
-    // ESC 종료 버튼
+    // dESC 종료 버튼
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     // 나머지 key 입력 확인

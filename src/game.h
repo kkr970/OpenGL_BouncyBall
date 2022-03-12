@@ -3,12 +3,12 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <irrKlang.h>
 #include <vector>
 #include <string>
 #include <tuple>
 #include <algorithm>
 #include <math.h>
-
 #include <iostream>
 
 #include "shader.h"
@@ -18,6 +18,9 @@
 #include "game_level.h"
 #include "text_renderer.h"
 #include "particle_generator.h"
+
+//namespace
+using namespace irrklang;
 
 //게임 state
 enum GameState{
@@ -128,6 +131,8 @@ private:
     GameObject *Player;
     TextRenderer *Text;
     ParticleGenerator *Particles;
+    ISoundEngine *SoundEngine = createIrrKlangDevice();
+    ISound *Bgm;
 
 public:
     GameState State;
@@ -153,6 +158,8 @@ public:
         delete Player;
         delete Text;
         delete Particles;
+        SoundEngine->drop();
+        Bgm->drop();
     }
 
     // 게임 초기설정, 초기화
@@ -189,6 +196,10 @@ public:
         Text = new TextRenderer(this->Width, this->Height);
         fontSize = 72;
         Text->Load("resources/fonts/MaplestoryFont_TTF/Maplestory Bold.ttf", fontSize);
+        // 사운드
+        Bgm = SoundEngine->play2D("resources/audio/bensound-tenderness.mp3", true, false, true);
+        if(Bgm)
+            Bgm->setVolume(0.3f);
         // 레벨 로드
         for(int i = 1 ; i <= maxLevel ; i ++)
         {
@@ -225,7 +236,11 @@ public:
                 }
                 this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 // 직진상태일 때, 누르면 직진성을 제거
-                if(Player->isDirectional) Player->isDirectional = false;
+                if(Player->isDirectional)
+                {
+                    Player->isDirectional = false;
+                    SoundEngine->play2D("resources/audio/false_dir.mp3");
+                }
             }
             else if (this->Keys[GLFW_KEY_D] || this->Keys[GLFW_KEY_RIGHT])
             {
@@ -239,7 +254,11 @@ public:
                 }
                 this->Player->Position.x += (PLAYER_SPEED_X * dt);
                 // 직진상태일 때, 누르면 직진성을 제거
-                if(Player->isDirectional) Player->isDirectional = false;
+                if(Player->isDirectional)
+                {
+                    Player->isDirectional = false;
+                    SoundEngine->play2D("resources/audio/false_dir.mp3");
+                }
             }
             // 관성, 가속도가 남아있는데 점점 줄어드는 것
             if(!this->Keys[GLFW_KEY_A] && !this->Keys[GLFW_KEY_D] &&
@@ -359,6 +378,7 @@ public:
                     else if(box.Type == TRAP)
                     {
                         Player->Destroyed = true;
+                        SoundEngine->play2D("resources/audio/block_trap.mp3");
                     }
                     // 나머지
                     else
@@ -370,22 +390,35 @@ public:
                             Player->Position.y -= penetration;
                             //일반 블록 1
                             if (box.Type == NORMAL)
+                            {
                                 PLAYER_SPEED_Y = -330.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //부서지는 불록 2
                             else if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
                                 PLAYER_SPEED_Y = -330.0f;
+                                SoundEngine->play2D("resources/audio/block_breakable.mp3");
                             }
                             //바운스 블록 4
                             else if (box.Type == BOUNCE)
+                            {
                                 PLAYER_SPEED_Y = -533.0f;
+                                SoundEngine->play2D("resources/audio/block_bounce.mp3");
+                            }
                             //좌우 움돌 5
                             else if (box.Type == LRMOVE)
+                            {
                                 PLAYER_SPEED_Y = -330.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //상하 움돌 6
                             else if (box.Type == UDMOVE)
+                            {
                                 Player->Destroyed = true;
+                                SoundEngine->play2D("resources/audio/block_trap.mp3");
+                            }
                             //우직진블록 10
                             else if (box.Type == RIGHTDIR)
                             {
@@ -393,6 +426,7 @@ public:
                                 PLAYER_SPEED_X = PLAYER_Y_SPEED_MAX;
                                 Player->Position = glm::vec2( ( box.Position.x + box.Size.x + 0.01f ),
                                                               ( box.Position.y + (box.Size.y/2.0f) - PLAYER_RADIUS ));
+                                SoundEngine->play2D("resources/audio/block_dir.mp3");
                             }
                             //좌직진블록 11
                             else if (box.Type == LEFTDIR)
@@ -401,102 +435,185 @@ public:
                                 PLAYER_SPEED_X = -PLAYER_Y_SPEED_MAX;
                                 Player->Position = glm::vec2( ( box.Position.x - (PLAYER_RADIUS*2.0f) - 0.01f ),
                                                               ( box.Position.y + (box.Size.y/2.0f) - PLAYER_RADIUS ));
+                                SoundEngine->play2D("resources/audio/block_dir.mp3");
                             }
                         }
                         // 아래에서 충돌
-                        if(dir == DOWN)
+                        else if(dir == DOWN)
                         {      
                             float penetration = PLAYER_RADIUS - std::abs(diff_vector.y);
                             Player->Position.y += penetration;
                             //일반 블록 1
                             if (box.Type == NORMAL)
+                            {
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //부서지는 불록 2
                             else if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                                SoundEngine->play2D("resources/audio/block_breakable.mp3");
                             }
                             //바운스 블록 4
                             else if (box.Type == BOUNCE)
+                            {
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y * 1.618f;
+                                SoundEngine->play2D("resources/audio/block_bounce.mp3");
+                            }
                             //좌우 움돌 5
                             else if (box.Type == LRMOVE)
+                            {
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //상하 움돌 6
                             else if (box.Type == UDMOVE)
+                            {
                                 Player->Destroyed = true;
+                                SoundEngine->play2D("resources/audio/block_trap.mp3");
+                            }
                             //우직진블록 10
                             else if (box.Type == RIGHTDIR)
+                            {
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //좌직진블록 11
                             else if (box.Type == LEFTDIR)
+                            {
                                 PLAYER_SPEED_Y = -PLAYER_SPEED_Y;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                         }
                         // 왼쪽에서 충돌
-                        if(dir == LEFT)
+                        else if(dir == LEFT)
                         {   
                             float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
                             Player->Position.x -= penetration;
                             //일반 블록 1
                             if (box.Type == NORMAL)
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X > 100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = -100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //부서지는 불록 2
                             else if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                SoundEngine->play2D("resources/audio/block_breakable.mp3");
                             }
                             //바운스 블록 4
                             else if (box.Type == BOUNCE)
+                            {
                                 PLAYER_SPEED_X = -533.0f;
+                                SoundEngine->play2D("resources/audio/block_bounce.mp3");
+                            }
                             //좌우 움돌 5
                             else if (box.Type == LRMOVE)
+                            {
                                 Player->Destroyed = true;                                
+                                SoundEngine->play2D("resources/audio/block_trap.mp3");
+                            }
                             //상하 움돌 6
                             else if (box.Type == UDMOVE) 
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X > 100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = -100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //우직진블록 10
                             else if (box.Type == RIGHTDIR)
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X > 100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = -100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //좌직진블록 11
                             else if (box.Type == LEFTDIR)
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X > 100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = -100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                         }
                         // 오른쪽에서 충돌
-                        if(dir == RIGHT)
+                        else if(dir == RIGHT)
                         {
                             float penetration = PLAYER_RADIUS - std::abs(diff_vector.x);
                             Player->Position.x += penetration;
                             //일반 블록 1
                             if (box.Type == NORMAL)
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X < -100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = 100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //부서지는 불록 2
                             else if (box.Type == BREAKABLE)
                             {
                                 box.Destroyed = true;
                                 PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                SoundEngine->play2D("resources/audio/block_breakable.mp3");
                             }
                             //바운스 블록 4
                             else if (box.Type == BOUNCE)
+                            {
                                 PLAYER_SPEED_X = 533.0f;
+                                SoundEngine->play2D("resources/audio/block_bounce.mp3");
+                            }
                             //좌우 움돌 5
                             else if (box.Type == LRMOVE)
+                            {
                                 Player->Destroyed = true;                                
+                                SoundEngine->play2D("resources/audio/block_trap.mp3");
+                            }
                             //상하 움돌 6
                             else if (box.Type == UDMOVE) 
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X < -100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = 100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //우직진블록 10
                             else if (box.Type == RIGHTDIR)
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X < -100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = 100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                             //좌직진블록 11
                             else if (box.Type == LEFTDIR)
-                                PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                            {
+                                if(PLAYER_SPEED_X < -100.0f)
+                                    PLAYER_SPEED_X = -PLAYER_SPEED_X;
+                                else
+                                    PLAYER_SPEED_X = 100.0f;
+                                SoundEngine->play2D("resources/audio/block_normal.wav");
+                            }
                         }
                         // 공이 내부로 뚫고 들어간 경우 - 확인된 상황이 움돌에 끼는 경우, 파괴가 적당함
                         if(dir == -1)
                         {
                             Player->Destroyed = true;
+                            SoundEngine->play2D("resources/audio/block_trap.mp3");
                         }
                     }
                 }
@@ -556,6 +673,7 @@ public:
     void BallDirectional(float dt)
     {
         this->Player->Position.x += PLAYER_SPEED_X * dt;
+        PLAYER_SPEED_Y = 0;
     }
 
     // 게임 업데이트
@@ -570,7 +688,8 @@ public:
 
             this->DoCollisions(dt);
             this->moveBlock(dt);
-            Particles->Update(dt, *Player, 2, glm::vec2(PLAYER_RADIUS / 3.0f) );
+            Particles->Update(dt, *Player, 2, glm::vec2(PLAYER_RADIUS / 2.65f) );
+            std::cout << PLAYER_SPEED_X << std::endl;
             //스테이지 실패
             if(Player->Position.y >= this->Height || Player->Destroyed)
             {
@@ -600,10 +719,10 @@ public:
             // draw background
             Texture2D background = ResourceManager::GetTexture("background");
             Renderer->DrawSprite(background, glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);
-            // draw level
-            this->Levels[this->Level].Draw(*Renderer);
             // draw particles
             Particles->Draw();
+            // draw level
+            this->Levels[this->Level].Draw(*Renderer);
             // draw player
             Player = this->Levels[this->Level].Ball;
             Player->Draw(*Renderer);
