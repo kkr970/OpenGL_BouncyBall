@@ -354,7 +354,9 @@ public:
     void NextLevel()
     {
         if(this->Level < maxLevel - 1)
+        {
             this->Level++;
+        }
         else
         {
             //hidden이 true면 히든맵 도전
@@ -402,6 +404,7 @@ public:
                     if(box.Type == GOAL)
                     {
                         SoundEngine->play2D("resources/audio/block_goal.mp3");
+                        ResetPlayer();
                         NextLevel();
                     }
                     // 함정 3
